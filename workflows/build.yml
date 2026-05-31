@@ -1,4 +1,4 @@
-name: Build UF2 Firmware
+name: Build UF2 Firmware 
 
 on:
   push:
