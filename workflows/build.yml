@@ -1,0 +1,31 @@
+name: Build UF2 Firmware
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: Python installieren (für PlatformIO)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: PlatformIO installieren
+        run: pip install platformio
+
+      - name: Firmware bauen
+        run: pio run
+
+      - name: UF2 hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-uf2
+          path: .pio/build/nrf52840/firmware.uf2
