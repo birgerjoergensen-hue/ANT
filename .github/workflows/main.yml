@@ -1,29 +1,38 @@
-
-name: Build UF2 Firmware 
+name: Arduino Build
 
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Repo auschecken
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      
+      # 1. ZUERST das Tool installieren, bevor die Arduino-Umgebung geladen wird
+      - name: Install Tooling
+        run: |
+          pip3 install adafruit-nrfutil
+          # Suche nach dem Pfad, wo pip es hingelegt hat, und verlinke es global
+          sudo ln -s $(which adafruit-nrfutil) /usr/local/bin/adafruit-nrfutil
+          
+      - uses: arduino/setup-arduino-cli@v2
+      
+      - name: Install Board
+        run: |
+          arduino-cli core update-index --additional-urls https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+          arduino-cli core install adafruit:nrf52 --additional-urls https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
 
-      - name: Python installieren (für PlatformIO)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+      - name: Compile
+        run: |
+          arduino-cli compile --fqbn adafruit:nrf52:feather52840sense --output-dir ./build .
 
-      - name: PlatformIO installieren
-        run: pip install platformio
+      - name: Create UF2
+        run: |
+          TOOL_PATH="/home/runner/.arduino15/packages/adafruit/hardware/nrf52/1.7.0/tools/uf2conv/uf2conv.py"
+          python3 $TOOL_PATH -f 0xada52840 -c -o ./build/firmware.uf2 ./build/*.hex
 
-      - name: Firmware bauen
-        run: pio run
-
-      - name: UF2 hochladen
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-uf2
-          path: .pio/build/nrf52840/firmware.uf2
+          name: firmware-fertig
+          path: ./build/firmware.uf2
